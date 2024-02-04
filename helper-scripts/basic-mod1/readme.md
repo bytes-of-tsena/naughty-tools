@@ -13,3 +13,9 @@ Implement a decryption algorithm that does the following:
 ## Constraints
 
 - Make sure the code uses the least amount of lines of code you can think of.
+
+## Usage
+
+```sh
+python3 ./decrypt-harder.py
+```
