@@ -1,0 +1,1 @@
+print("".join((chr(i + 65) if i <= 25 else chr(i + 22) if i <= 35 else "_" for i in list(int(i) % 37 for i in open("./message.txt", "r").read().split()))))
