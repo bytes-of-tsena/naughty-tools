@@ -10,17 +10,21 @@ def collect_args():
     )
     parser.add_argument(
         "-w",
-        "--wordlist",
-        help="Wordlist file path with potential passwords to crack hash e.g. /usr/share/wordlists/rockyou.txt",
+        "--wordlists",
+        required=True,
+        help="Wordlist(s) file path with potential passwords to crack hash e.g. /usr/share/wordlists/rockyou.txt or /usr/share/wordlists/rockyou.txt /usr/share/wordlists/wordlist.txt /usr/share/wordlists/wordlist2.txt",
+        nargs="+",
     )
     parser.add_argument(
         "-d",
         "--digest",
+        required=True,
         help="Digest to crack i.e. hash value of the password e.g. 5f4dcc3b5aa765d61d8327deb882cf99 for 'password'",
     )
     parser.add_argument(
         "-t",
         "--type",
+        required=True,
         help="Type of hash to crack i.e. 'md5', 'sha1', 'sha256', 'sha512' (only these 4 types are supported for now)",
     )
     parser.add_argument(
@@ -35,6 +39,17 @@ def read_wordlist(file_path: str) -> str | None:
     with open(file_path, "r") as file:
         for word in file:
             yield word.strip()
+
+
+def crack_hash_multi_wordlists(
+    target_hash: str, wordlists: Iterable[str], hash_type: str
+) -> tuple[str | None, str]:
+    for wordlist in wordlists:
+        cracked_hash = crack_hash(target_hash, read_wordlist(wordlist), hash_type)
+        if cracked_hash:
+            return (cracked_hash, wordlist)
+
+    return (None, "")
 
 
 def crack_hash(target_hash: str, wordlist: Iterable, hash_type: str) -> str | None:
@@ -90,9 +105,9 @@ def main():
             print_help()
             return
 
-        if not args.wordlist or not args.digest or not args.type:
+        if not args.wordlists or not args.digest or not args.type:
             print_usage()
-            if not args.wordlist:
+            if not args.wordlists:
                 print("-- Error: Wordlist is required")
             if not args.digest:
                 print("-- Error: Digest or hash is required")
@@ -102,13 +117,31 @@ def main():
                 )
             return
 
-        wordlist = read_wordlist(args.wordlist)
-        cracked_password = crack_hash(args.digest, wordlist, args.type)
-        (
-            print(f"Cracked 🥳 password: '{cracked_password}'")
-            if cracked_password
-            else print("😞 Password not found in wordlist")
-        )
+        # check if more than one wordlist is provided
+        if len(args.wordlists) > 1:
+            cracked_password, matched_wordlist = crack_hash_multi_wordlists(
+                args.digest, args.wordlists, args.type
+            )
+            (
+                print(
+                    f"Cracked 🥳 password: '{cracked_password}' found in \"{matched_wordlist}\" file"
+                )
+                if cracked_password
+                else print(
+                    "😞 Password not found in any of the wordlists. Consider using bigger wordlists or trying different dictionaries"
+                )
+            )
+        else:  # only one wordlist is provided
+            wordlist = read_wordlist(args.wordlists[0])
+            cracked_password = crack_hash(args.digest, wordlist, args.type)
+            (
+                print(f"Cracked 🥳 password: '{cracked_password}'")
+                if cracked_password
+                else print(
+                    "😞 Password not found in wordlist. Consider using a bigger wordlist or trying a different dictionary"
+                )
+            )
+        return
     except Exception as e:
         print(f"-- 😩 Error: {e}")
 
